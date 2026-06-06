@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CDE Quality Review System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F7F6F3;
+  --surface: #FFFFFF;
+  --surface2: #F0EEE9;
+  --border: #E2DFDA;
+  --border2: #CBC8C2;
+  --text: #1A1916;
+  --text2: #6B6860;
+  --text3: #9C9A94;
+  --green-bg: #E8F2E0;
+  --green: #3A6B1A;
+  --amber-bg: #FDF0DC;
+  --amber: #8A5010;
+  --blue-bg: #E4EEF9;
+  --blue: #1A4F8A;
+  --red-bg: #FDECEA;
+  --red: #8A1A1A;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+/* Layout */
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 0; display: flex; flex-direction: column; }
+.sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
+.sidebar-logo h1 { font-size: 13px; font-weight: 500; letter-spacing: .03em; color: var(--text); }
+.sidebar-logo p { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.nav { padding: 12px 10px; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--text2); margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--text); color: #fff; }
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.nav-section { font-size: 10px; font-weight: 500; letter-spacing: .08em; color: var(--text3); padding: 12px 10px 4px; text-transform: uppercase; }
+.sidebar-footer { padding: 14px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); }
+
+.main { overflow-y: auto; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+.topbar-title { font-size: 15px; font-weight: 500; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+.content { padding: 24px 28px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 400; transition: background .15s; }
+.btn:hover { background: var(--surface2); }
+.btn-primary { background: var(--text); color: #fff; border-color: var(--text); }
+.btn-primary:hover { background: #2d2c28; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn svg { width: 14px; height: 14px; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 12px; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.card-title { font-size: 14px; font-weight: 500; }
+.card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* Stats */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.stat-val { font-size: 28px; font-weight: 300; font-family: 'DM Mono', monospace; line-height: 1; }
+.stat-lbl { font-size: 11px; color: var(--text3); margin-top: 6px; letter-spacing: .02em; }
+.stat-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+/* Progress */
+.prog { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 10px; }
+.prog-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .4s ease; }
+
+/* Table */
+.q-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.q-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); font-weight: 500; padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.q-table td { padding: 8px 8px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+.q-table tr:last-child td { border-bottom: none; }
+.q-table th:not(:first-child), .q-table td:not(:first-child) { text-align: center; }
+.q-table th:first-child, .q-table td:first-child { width: auto; }
+.q-table th:not(:first-child) { width: 58px; }
+.q-table th:last-child, .q-table td:last-child { width: 44px; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 22px; border-radius: 5px; font-size: 11px; font-weight: 500; cursor: pointer; transition: opacity .12s; border: none; font-family: 'DM Mono', monospace; }
+.badge:hover { opacity: .75; }
+.b-done { background: var(--green-bg); color: var(--green); }
+.b-ip { background: var(--amber-bg); color: var(--amber); }
+.b-ns { background: var(--surface2); color: var(--text3); }
+.b-pm { background: var(--blue-bg); color: var(--blue); width: auto; padding: 0 8px; font-family: 'DM Sans', sans-serif; font-size: 11px; }
+.b-pm-done { background: var(--green-bg); color: var(--green); width: auto; padding: 0 8px; font-family: 'DM Sans', sans-serif; font-size: 11px; }
+.b-locked { background: var(--surface2); color: var(--border2); width: auto; padding: 0 8px; font-family: 'DM Sans', sans-serif; font-size: 11px; cursor: not-allowed; }
+
+/* Tags */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; }
+.t-done { background: var(--green-bg); color: var(--green); }
+.t-ip { background: var(--amber-bg); color: var(--amber); }
+.t-pm { background: var(--blue-bg); color: var(--blue); }
+.t-ns { background: var(--surface2); color: var(--text3); }
+
+/* Filters */
+.filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-row select { font-size: 12px; padding: 6px 10px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; cursor: pointer; }
+
+/* Forms */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 11px; color: var(--text2); letter-spacing: .02em; }
+.form-group input, .form-group select, .form-group textarea { font-size: 13px; padding: 8px 10px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--text); }
+.disc-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.disc-option { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 12px; cursor: pointer; user-select: none; transition: background .12s; }
+.disc-option input { accent-color: var(--text); }
+.disc-option:has(input:checked) { background: var(--text); color: #fff; border-color: var(--text); }
+
+/* Log rows */
+.log-row { display: grid; grid-template-columns: 80px 110px 130px 1fr 1fr 90px; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center; }
+.log-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); font-weight: 500; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,25,22,.45); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; width: 380px; max-width: 95vw; }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.modal-title { font-size: 14px; font-weight: 500; }
+.modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.close-btn { background: none; border: none; cursor: pointer; color: var(--text3); padding: 2px; }
+.close-btn:hover { color: var(--text); }
+
+/* Notices */
+.notice { font-size: 12px; color: var(--text2); padding: 8px 12px; background: var(--surface2); border-radius: var(--radius); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.err-bar { font-size: 12px; color: var(--red); padding: 8px 12px; background: var(--red-bg); border-radius: var(--radius); margin-bottom: 12px; }
+
+/* Spinner */
+.spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--text2); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: -2px; margin-right: 4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Setup screen */
+.setup-wrap { max-width: 560px; margin: 60px auto; }
+.setup-wrap h2 { font-size: 20px; font-weight: 400; margin-bottom: 8px; }
+.setup-wrap p { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.6; }
+.setup-step { display: flex; gap: 12px; margin-bottom: 16px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: #fff; font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.step-body { flex: 1; }
+.step-body h4 { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.step-body p { font-size: 12px; color: var(--text2); margin: 0; line-height: 1.5; }
+.step-body code { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 4px; color: var(--text); }
+.config-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-top: 20px; }
+.config-form h3 { font-size: 14px; font-weight: 500; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// Fill these in after setup (see README)
+let CONFIG = {
+  siteUrl: '',        // e.g. https://yourorg.sharepoint.com/sites/Engineering
+  trackerListId: '',  // GUID of "QR Tracker" list
+  logListId: '',      // GUID of "QR Review Log" list
+};
+
+// Try load saved config
+try {
+  const saved = JSON.parse(localStorage.getItem('qr_config') || '{}');
+  if (saved.siteUrl) CONFIG = saved;
+} catch(e) {}
+
+const DISCIPLINES = ['Process/Chemical','Mechanical','Electrical','Controls/Automation','Civil/Structural','Architecture','Piping/Layout','Construction'];
+const QLEVELS = ['Q1','Q2','Q3','Q4'];
+const QLABELS = {Q1:'Development',Q2:'Lead review',Q3:'Self-check',Q4:'Peer review'};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let S = {
+  tab: 'dashboard',
+  rows: [],
+  logRows: [],
+  loading: false,
+  saving: false,
+  error: null,
+  modal: null,
+  filterDisc: 'all',
+  filterStatus: 'all',
+  configured: !!(CONFIG.siteUrl && CONFIG.trackerListId && CONFIG.logListId),
+  token: null,
+};
+
+// ─── GRAPH API ───────────────────────────────────────────────────────────────
+async function getToken() {
+  if (S.token) return S.token;
+  // Uses MSAL implicit flow via SharePoint's built-in auth context
+  // When hosted on SharePoint, window._spPageContextInfo is available
+  if (window._spPageContextInfo?.aadInfo) {
+    // SharePoint hosted: use SP's token
+    try {
+      const ctx = await new Promise(res => {
+        SP.SOD.executeFunc('sp.js', 'SP.ClientContext', () => {
+          const request = new XMLHttpRequest();
+          request.open('GET', `${CONFIG.siteUrl}/_api/contextinfo`, false);
+          request.setRequestHeader('Accept', 'application/json');
+          request.send();
+          res(JSON.parse(request.responseText)?.FormDigestValue);
+        });
+      });
+      return ctx;
+    } catch(e) {}
+  }
+  // MSAL fallback for standalone use
+  if (!window.msalInstance) {
+    const { PublicClientApplication } = await import('https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/dist/index.esm.js');
+    const tenantId = CONFIG.siteUrl.match(/https:\/\/([^.]+)\.sharepoint\.com/)?.[1];
+    window.msalInstance = new PublicClientApplication({
+      auth: {
+        clientId: CONFIG.clientId || '00000003-0000-0ff1-ce00-000000000000',
+        authority: `https://login.microsoftonline.com/${tenantId || 'common'}`,
+        redirectUri: window.location.href,
+      }
+    });
+    await window.msalInstance.initialize();
+  }
+  const accounts = window.msalInstance.getAllAccounts();
+  const req = { scopes: ['https://graph.microsoft.com/Sites.ReadWrite.All'], account: accounts[0] };
+  try {
+    const r = await window.msalInstance.acquireTokenSilent(req);
+    S.token = r.accessToken; return S.token;
+  } catch {
+    const r = await window.msalInstance.acquireTokenPopup(req);
+    S.token = r.accessToken; return S.token;
+  }
+}
+
+async function graphGet(path) {
+  const token = await getToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+  });
+  if (!res.ok) throw new Error(`Graph API error: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function graphPost(path, body, method='POST') {
+  const token = await getToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`Graph API error: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+// SharePoint site path helper
+function sitePath() {
+  const url = new URL(CONFIG.siteUrl);
+  const path = url.pathname.replace(/\/$/, '');
+  return `/sites/${url.hostname}:${path}`;
+}
+
+async function loadRows() {
+  S.loading = true; S.error = null; render();
+  try {
+    const site = await graphGet(`${sitePath()}`);
+    const siteId = site.id;
+
+    const [trackerRes, logRes] = await Promise.all([
+      graphGet(`/sites/${siteId}/lists/${CONFIG.trackerListId}/items?$expand=fields&$top=500`),
+      graphGet(`/sites/${siteId}/lists/${CONFIG.logListId}/items?$expand=fields&$top=500`)
+    ]);
+
+    S.rows = (trackerRes.value || []).map(i => ({ _id: i.id, ...i.fields }));
+    S.logRows = (logRes.value || []).map(i => ({ _id: i.id, ...i.fields }));
+    S.siteId = siteId;
+  } catch(e) {
+    S.error = e.message;
+  }
+  S.loading = false; render();
+}
+
+async function updateRow(rowId, fields) {
+  await graphPost(`/sites/${S.siteId}/lists/${CONFIG.trackerListId}/items/${rowId}/fields`, fields, 'PATCH');
+  const row = S.rows.find(r => r._id === rowId);
+  if (row) Object.assign(row, fields);
+}
+
+async function addTrackerRow(fields) {
+  const res = await graphPost(`/sites/${S.siteId}/lists/${CONFIG.trackerListId}/items`, { fields });
+  S.rows.push({ _id: res.id, ...res.fields, ...fields });
+}
+
+async function addLogRow(fields) {
+  const res = await graphPost(`/sites/${S.siteId}/lists/${CONFIG.logListId}/items`, { fields });
+  S.logRows.unshift({ _id: res.id, ...fields });
+}
+
+// ─── DATA HELPERS ─────────────────────────────────────────────────────────────
+function getProjects() {
+  const map = {};
+  S.rows.forEach(r => {
+    const num = r.ProjectNumber || r['Project Number'];
+    if (!num) return;
+    if (!map[num]) map[num] = { num, name: r.ProjectName||r['Project Name']||'', pm: r.ProjectManager||r['Project Manager']||'', client: r.Client||'', discs: [] };
+    const disc = r.Discipline;
+    if (disc && !map[num].discs.includes(disc)) map[num].discs.push(disc);
+  });
+  return Object.values(map);
+}
+
+function getRow(num, disc) {
+  return S.rows.find(r => (r.ProjectNumber||r['Project Number']) === num && r.Discipline === disc) || {};
+}
+
+function qStat(num, disc, q) { const r = getRow(num,disc); return r[q+'Status']||r[q+' Status']||'Not Started'; }
+function pmGate(num, disc) { const r = getRow(num,disc); return r.PMGate||r['PM Gate']||'Locked'; }
+function allQ4(num, disc) { return QLEVELS.every(q => qStat(num,disc,q) === 'Complete'); }
+
+function projPct(p) {
+  let done=0, total=0;
+  p.discs.forEach(d => {
+    QLEVELS.forEach(q => { total++; if(qStat(p.num,d,q)==='Complete') done++; });
+    total++; if(pmGate(p.num,d)==='Approved') done++;
+  });
+  return total ? Math.round(done/total*100) : 0;
+}
+
+function passFilter(p) {
+  if (S.filterDisc !== 'all' && !p.discs.includes(S.filterDisc)) return false;
+  const pct = projPct(p);
+  if (S.filterStatus === 'complete') return pct === 100;
+  if (S.filterStatus === 'inprogress') return pct > 0 && pct < 100;
+  if (S.filterStatus === 'notstarted') return pct === 0;
+  return true;
+}
+
+// ─── ICONS ───────────────────────────────────────────────────────────────────
+const icons = {
+  dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
+  projects: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h3l2 2h9a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>`,
+  log: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>`,
+  add: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>`,
+  x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+};
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  document.getElementById('root').innerHTML = S.configured ? renderApp() : renderSetup();
+}
+
+function renderApp() {
+  const projects = getProjects();
+  const allDiscs = [...new Set(projects.flatMap(p=>p.discs))].sort();
+  const tabs = ['dashboard','projects','log','add','settings'];
+  const tabLabels = ['Dashboard','Projects','Review log','New project','Settings'];
+
+  let views = '';
+  if (S.tab === 'dashboard') views = renderDashboard(projects, allDiscs);
+  else if (S.tab === 'projects') views = renderProjects(projects, allDiscs);
+  else if (S.tab === 'log') views = renderLog(allDiscs);
+  else if (S.tab === 'add') views = renderAddProject();
+  else if (S.tab === 'settings') views = renderSettings();
+
+  const titleMap = {dashboard:'Dashboard',projects:'Projects',log:'Review log',add:'New project',settings:'Settings'};
+
+  return `
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>Quality Review</h1>
+        <p>CDE Process Dept.</p>
+      </div>
+      <nav class="nav">
+        ${tabs.map((t,i) => `
+          <button class="nav-item ${S.tab===t?'active':''}" onclick="setTab('${t}')">
+            ${icons[t==='settings'?'settings':['dashboard','projects','log','add'][i]||'settings']}
+            ${tabLabels[i]}
+          </button>`).join('')}
+      </nav>
+      <div class="sidebar-footer">
+        Q1 Development · Q2 Lead review<br>Q3 Self-check · Q4 Peer review
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">${titleMap[S.tab]||''}</span>
+        <div class="topbar-actions">
+          ${S.loading ? `<span style="font-size:12px;color:var(--text3)"><span class="spin"></span>Loading…</span>` : ''}
+          ${S.saving ? `<span style="font-size:12px;color:var(--text3)"><span class="spin"></span>Saving…</span>` : ''}
+          <button class="btn btn-sm" onclick="loadRows()" title="Refresh">${icons.refresh} Refresh</button>
+          ${S.tab==='projects'?`<button class="btn btn-sm btn-primary" onclick="setTab('add')">${icons.add} New project</button>`:''}
+        </div>
+      </div>
+      <div class="content">
+        ${S.error ? `<div class="err-bar">⚠ ${S.error}</div>` : ''}
+        ${views}
+      </div>
+    </div>
+  </div>
+  ${S.modal ? renderModal(projects) : ''}`;
+}
+
+function filterBar(allDiscs) {
+  return `<div class="filter-row">
+    <select onchange="setFilter('filterDisc',this.value)">
+      <option value="all">All disciplines</option>
+      ${allDiscs.map(d=>`<option value="${d}" ${S.filterDisc===d?'selected':''}>${d}</option>`).join('')}
+    </select>
+    <select onchange="setFilter('filterStatus',this.value)">
+      <option value="all">All statuses</option>
+      <option value="notstarted" ${S.filterStatus==='notstarted'?'selected':''}>Not started</option>
+      <option value="inprogress" ${S.filterStatus==='inprogress'?'selected':''}>In progress</option>
+      <option value="complete" ${S.filterStatus==='complete'?'selected':''}>Complete</option>
+    </select>
+  </div>`;
+}
+
+function renderDashboard(projects, allDiscs) {
+  let tR=0,dR=0,pmD=0,pmT=0;
+  projects.forEach(p => {
+    p.discs.forEach(d => {
+      QLEVELS.forEach(q => { tR++; if(qStat(p.num,d,q)==='Complete') dR++; });
+      pmT++; if(pmGate(p.num,d)==='Approved') pmD++;
+    });
+  });
+  const pct = tR ? Math.round(dR/tR*100) : 0;
+  const filtered = projects.filter(passFilter);
+
+  let html = `<div class="stat-grid">
+    <div class="stat"><div class="stat-val">${projects.length}</div><div class="stat-lbl">Total projects</div></div>
+    <div class="stat"><div class="stat-val">${projects.filter(p=>projPct(p)===100).length}</div><div class="stat-lbl">Fully complete</div></div>
+    <div class="stat"><div class="stat-val">${dR}<span style="font-size:16px;color:var(--text3)">/${tR}</span></div><div class="stat-lbl">Reviews done</div><div class="stat-sub">${pct}% overall</div></div>
+    <div class="stat"><div class="stat-val">${pmD}<span style="font-size:16px;color:var(--text3)">/${pmT}</span></div><div class="stat-lbl">PM sign-offs</div></div>
+  </div>`;
+  html += filterBar(allDiscs);
+  if (!filtered.length) return html + `<div style="text-align:center;padding:3rem;color:var(--text3);font-size:13px">No projects match filters.</div>`;
+  filtered.forEach(p => {
+    const pc = projPct(p);
+    const pmA = p.discs.filter(d=>pmGate(p.num,d)==='Approved').length;
+    html += `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:2px">${p.num}</div>
+          <div style="font-weight:500;font-size:14px">${p.name}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">PM: ${p.pm} · ${p.discs.length} disciplines · PM sign-off: ${pmA}/${p.discs.length}</div>
+        </div>
+        <div style="font-size:20px;font-weight:300;font-family:'DM Mono',monospace;color:${pc===100?'var(--green)':'var(--text2)'}">${pc}%</div>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${pc}%"></div></div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderProjects(projects, allDiscs) {
+  const filtered = projects.filter(passFilter);
+  let html = filterBar(allDiscs);
+  html += `<div class="notice">${icons.projects} Click any Q cell to log a review. PM gate unlocks once all Q1–Q4 are complete for that discipline.</div>`;
+  if (!filtered.length) return html + `<div style="text-align:center;padding:3rem;color:var(--text3);font-size:13px">No projects match filters.</div>`;
+  filtered.forEach(p => {
+    const discs = S.filterDisc==='all' ? p.discs : p.discs.filter(d=>d===S.filterDisc);
+    html += `<div class="card">
+      <div class="card-header">
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${p.num}</div>
+          <div class="card-title">${p.name}</div>
+          <div class="card-sub">PM: ${p.pm} · Client: ${p.client}</div>
+        </div>
+        <span style="font-size:18px;font-weight:300;font-family:'DM Mono',monospace;color:var(--text2)">${projPct(p)}%</span>
+      </div>
+      <table class="q-table">
+        <thead><tr>
+          <th>Discipline</th>
+          ${QLEVELS.map(q=>`<th title="${QLABELS[q]}">${q}</th>`).join('')}
+          <th style="width:72px">PM gate</th>
+          <th>Done</th>
+        </tr></thead>
+        <tbody>
+        ${discs.map(d => {
+          const done = QLEVELS.filter(q=>qStat(p.num,d,q)==='Complete').length;
+          const pmA = pmGate(p.num,d)==='Approved';
+          const pmHtml = pmA
+            ? `<span class="badge b-pm-done">PM ✓</span>`
+            : allQ4(p.num,d)
+              ? `<button class="badge b-pm" onclick="openPmModal('${p.num}','${d}')">PM →</button>`
+              : `<span class="badge b-locked">PM</span>`;
+          return `<tr>
+            <td style="font-size:12px">${d}</td>
+            ${QLEVELS.map(q => {
+              const s = qStat(p.num,d,q);
+              const cls = s==='Complete'?'b-done':s==='In Progress'?'b-ip':'b-ns';
+              const lbl = s==='Complete'?'✓':s==='In Progress'?'…':'–';
+              return `<td><button class="badge ${cls}" title="${q}: ${QLABELS[q]}" onclick="openModal('${p.num}','${d}','${q}')">${lbl}</button></td>`;
+            }).join('')}
+            <td>${pmHtml}</td>
+            <td style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${done}/4${pmA?'+':''}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  });
+  return html;
+}
+
+function renderLog(allDiscs) {
+  let filtered = S.logRows;
+  if (S.filterDisc !== 'all') filtered = filtered.filter(r=>(r.Discipline||r['Discipline'])===S.filterDisc);
+  let html = filterBar(allDiscs);
+  if (!filtered.length) return html + `<div style="text-align:center;padding:3rem;color:var(--text3);font-size:13px">No log entries yet.</div>`;
+  html += `<div class="log-row log-hdr"><span>Project</span><span>Level</span><span>Discipline</span><span>Initiator</span><span>Reviewer</span><span>Status</span></div>`;
+  filtered.forEach(r => {
+    const lvl = r.ReviewLevel||r['Review Level']||'';
+    const s = r.Status||'';
+    const isPm = lvl.toLowerCase().includes('pm');
+    const scls = isPm?'t-pm':s==='Complete'?'t-done':s==='In Progress'?'t-ip':'t-ns';
+    html += `<div class="log-row">
+      <span style="font-family:'DM Mono',monospace;font-size:11px">${r.ProjectNumber||r['Project Number']||''}</span>
+      <span style="font-size:12px">${lvl}</span>
+      <span style="color:var(--text2)">${r.Discipline||''}</span>
+      <span>${r.Initiator||'—'}</span>
+      <span>${r.Reviewer||'—'}</span>
+      <span class="tag ${scls}">${s}</span>
+    </div>`;
+  });
+  return html;
+}
+
+function renderAddProject() {
+  return `<div class="card" style="max-width:600px">
+    <div class="card-header"><div class="card-title">Add new project</div></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Project number</label><input id="f-num" placeholder="e.g. 250312"></div>
+      <div class="form-group"><label>Project name</label><input id="f-name" placeholder="e.g. Acme Brewery Line 3"></div>
+      <div class="form-group"><label>Project manager</label><input id="f-pm" placeholder="Name"></div>
+      <div class="form-group"><label>Client</label><input id="f-client" placeholder="Client name"></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500">Active disciplines</div>
+    <div class="disc-grid">
+      ${DISCIPLINES.map(d=>`<label class="disc-option"><input type="checkbox" class="disc-cb" value="${d}" checked> ${d}</label>`).join('')}
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" onclick="setTab('projects')">Cancel</button>
+      <button class="btn btn-primary" onclick="addProject()">${icons.add} Add project</button>
+    </div>
+  </div>`;
+}
+
+function renderSettings() {
+  return `<div class="card" style="max-width:560px">
+    <div class="card-header"><div class="card-title">SharePoint connection</div></div>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="form-group"><label>SharePoint site URL</label><input id="s-url" value="${CONFIG.siteUrl}" placeholder="https://yourorg.sharepoint.com/sites/Engineering"></div>
+      <div class="form-group"><label>Quality Review Tracker list ID (GUID)</label><input id="s-tid" value="${CONFIG.trackerListId}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+      <div class="form-group"><label>Review Log list ID (GUID)</label><input id="s-lid" value="${CONFIG.logListId}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="saveConfig()">Save & connect</button>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--text2);line-height:1.7">
+        <strong>How to find your list IDs:</strong><br>
+        1. Go to your SharePoint site → Site contents<br>
+        2. Click on the list → Settings (gear icon) → List settings<br>
+        3. The list ID is in the URL: <code style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);padding:1px 4px;border-radius:3px">List=%7B<strong>GUID here</strong>%7D</code> (decode %7B=%7B to {})
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderModal(projects) {
+  const m = S.modal;
+  if (!m) return '';
+  const p = projects.find(x=>x.num===m.projNum)||{};
+  let body = '';
+  if (m.type === 'pm') {
+    body = `<div style="display:flex;flex-direction:column;gap:10px">
+      <div class="form-group"><label>PM name</label><input id="m-pm-name" value="${p.pm||''}" placeholder="Name"></div>
+      <div class="form-group"><label>Sign-off notes (issue type, milestone, etc.)</label><input id="m-pm-notes" placeholder="e.g. IFB, IFC, client submission..."></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePmModal()">Approve & sign off</button>
+    </div>`;
+  } else {
+    const r = getRow(m.projNum, m.disc);
+    const curInit = r[m.q+'Initiator']||r[m.q+' Initiator']||'';
+    const curRev = r[m.q+'Reviewer']||r[m.q+' Reviewer']||'';
+    const curStat = r[m.q+'Status']||r[m.q+' Status']||'Not Started';
+    body = `<div style="display:flex;flex-direction:column;gap:10px">
+      <div class="form-group"><label>Initiator (who produced the deliverable)</label><input id="m-init" value="${curInit}" placeholder="Name"></div>
+      <div class="form-group"><label>Reviewer</label><input id="m-rev" value="${curRev}" placeholder="Name"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="m-status">
+          <option value="Not Started" ${curStat==='Not Started'?'selected':''}>Not started</option>
+          <option value="In Progress" ${curStat==='In Progress'?'selected':''}>In progress</option>
+          <option value="Complete" ${curStat==='Complete'?'selected':''}>Complete</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Notes / Bluebeam link</label><input id="m-notes" placeholder="Optional"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveModal()">Save</button>
+    </div>`;
+  }
+  return `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">${m.type==='pm'?'PM verification':`${m.q} – ${QLABELS[m.q]||''}`}</div>
+        </div>
+        <button class="close-btn" onclick="closeModal()">${icons.x}</button>
+      </div>
+      <div class="modal-sub">${m.projNum} · ${m.disc}</div>
+      ${body}
+    </div>
+  </div>`;
+}
+
+function renderSetup() {
+  return `<div style="padding:28px">
+    <div class="setup-wrap">
+      <h2>Setup required</h2>
+      <p>This app stores all data in SharePoint Lists inside your M365 tenant. Complete the steps below once, then the app is ready for your whole team.</p>
+
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Create two SharePoint Lists</h4>
+          <p>Go to your SharePoint site → Site contents → New → List.<br>
+          Create two blank lists:<br>
+          · <code>QR Tracker</code> — main review matrix<br>
+          · <code>QR Review Log</code> — audit trail</p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Add columns to QR Tracker</h4>
+          <p>Add these columns (all Single line of text unless noted):<br>
+          <code>ProjectNumber</code> · <code>ProjectName</code> · <code>ProjectManager</code> · <code>Client</code> · <code>Discipline</code> · <code>Q1Status</code> · <code>Q1Initiator</code> · <code>Q1Reviewer</code> · <code>Q2Status</code> · <code>Q2Initiator</code> · <code>Q2Reviewer</code> · <code>Q3Status</code> · <code>Q3Initiator</code> · <code>Q3Reviewer</code> · <code>Q4Status</code> · <code>Q4Initiator</code> · <code>Q4Reviewer</code> · <code>PMGate</code> · <code>PMReviewer</code> · <code>PMNotes</code></p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Add columns to QR Review Log</h4>
+          <p>Add: <code>ProjectNumber</code> · <code>ProjectName</code> · <code>Discipline</code> · <code>ReviewLevel</code> · <code>Status</code> · <code>Initiator</code> · <code>Reviewer</code> · <code>Notes</code></p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Get the list IDs</h4>
+          <p>For each list: List settings → the URL contains <code>List=%7Bxxxxxxxx-...%7D</code>. Copy the GUID between %7B and %7D.</p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Enter your connection details below</h4>
+          <p>Paste your site URL and list IDs. The app will connect automatically using your Microsoft 365 login.</p>
+        </div>
+      </div>
+
+      <div class="config-form">
+        <h3>Connect to SharePoint</h3>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group"><label>SharePoint site URL</label><input id="s-url" value="${CONFIG.siteUrl}" placeholder="https://yourorg.sharepoint.com/sites/Engineering"></div>
+          <div class="form-group"><label>QR Tracker list ID</label><input id="s-tid" value="${CONFIG.trackerListId}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+          <div class="form-group"><label>QR Review Log list ID</label><input id="s-lid" value="${CONFIG.logListId}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveConfig()">Connect & launch app</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
+function setTab(t) { S.tab = t; S.error = null; render(); }
+function setFilter(k, v) { S[k] = v; render(); }
+function openModal(projNum, disc, q) { S.modal = {type:'qr', projNum, disc, q}; render(); }
+function openPmModal(projNum, disc) { S.modal = {type:'pm', projNum, disc}; render(); }
+function closeModal() { S.modal = null; render(); }
+
+function saveConfig() {
+  const url = document.getElementById('s-url')?.value?.trim();
+  const tid = document.getElementById('s-tid')?.value?.trim();
+  const lid = document.getElementById('s-lid')?.value?.trim();
+  if (!url || !tid || !lid) { alert('All three fields are required.'); return; }
+  CONFIG = { siteUrl: url, trackerListId: tid, logListId: lid };
+  try { localStorage.setItem('qr_config', JSON.stringify(CONFIG)); } catch(e) {}
+  S.configured = true;
+  S.token = null;
+  loadRows();
+}
+
+async function saveModal() {
+  const m = S.modal;
+  if (!m || S.saving) return;
+  const init = document.getElementById('m-init')?.value||'';
+  const rev = document.getElementById('m-rev')?.value||'';
+  const status = document.getElementById('m-status')?.value||'In Progress';
+  const notes = document.getElementById('m-notes')?.value||'';
+  const r = getRow(m.projNum, m.disc);
+  if (!r._id) return;
+
+  S.saving = true; S.modal = null; render();
+  try {
+    const fields = {};
+    fields[m.q+'Status'] = status;
+    fields[m.q+'Initiator'] = init;
+    fields[m.q+'Reviewer'] = rev;
+    await updateRow(r._id, fields);
+    await addLogRow({
+      ProjectNumber: m.projNum,
+      ProjectName: r.ProjectName||r['Project Name']||'',
+      Discipline: m.disc,
+      ReviewLevel: `${m.q} – ${QLABELS[m.q]}`,
+      Status: status,
+      Initiator: init,
+      Reviewer: rev,
+      Notes: notes
+    });
+  } catch(e) { S.error = 'Save failed: ' + e.message; }
+  S.saving = false; render();
+}
+
+async function savePmModal() {
+  const m = S.modal;
+  if (!m || S.saving) return;
+  const pmName = document.getElementById('m-pm-name')?.value||'';
+  const pmNotes = document.getElementById('m-pm-notes')?.value||'';
+  const r = getRow(m.projNum, m.disc);
+  if (!r._id) return;
+
+  S.saving = true; S.modal = null; render();
+  try {
+    await updateRow(r._id, { PMGate: 'Approved', PMReviewer: pmName, PMNotes: pmNotes });
+    await addLogRow({
+      ProjectNumber: m.projNum,
+      ProjectName: r.ProjectName||r['Project Name']||'',
+      Discipline: m.disc,
+      ReviewLevel: 'PM Gate',
+      Status: 'Approved',
+      Initiator: pmName,
+      Reviewer: pmName,
+      Notes: pmNotes
+    });
+  } catch(e) { S.error = 'Save failed: ' + e.message; }
+  S.saving = false; render();
+}
+
+async function addProject() {
+  if (S.saving) return;
+  const num = document.getElementById('f-num')?.value?.trim();
+  const name = document.getElementById('f-name')?.value?.trim();
+  const pm = document.getElementById('f-pm')?.value?.trim()||'—';
+  const client = document.getElementById('f-client')?.value?.trim()||'—';
+  if (!num || !name) { alert('Project number and name are required.'); return; }
+  const discs = [...document.querySelectorAll('.disc-cb:checked')].map(x=>x.value);
+  if (!discs.length) { alert('Select at least one discipline.'); return; }
+
+  S.saving = true; render();
+  try {
+    for (const disc of discs) {
+      await addTrackerRow({
+        ProjectNumber: num, ProjectName: name, ProjectManager: pm, Client: client,
+        Discipline: disc,
+        Q1Status:'Not Started', Q2Status:'Not Started', Q3Status:'Not Started', Q4Status:'Not Started',
+        PMGate: 'Locked'
+      });
+    }
+    S.tab = 'projects';
+  } catch(e) { S.error = 'Could not add project: ' + e.message; }
+  S.saving = false; render();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+render();
+if (S.configured) loadRows();
+</script>
+</body>
+</html>
