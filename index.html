@@ -192,47 +192,89 @@ let S = {
 };
 
 // ─── GRAPH API ───────────────────────────────────────────────────────────────
+// OAuth2 implicit flow — no external library needed
+const GRAPH_CLIENT_ID = '00000003-0000-0ff1-ce00-000000000000'; // Microsoft Graph Explorer app (public)
+const GRAPH_SCOPE = 'https://graph.microsoft.com/Sites.ReadWrite.All User.Read';
+
+function getTenantId() {
+  const m = CONFIG.siteUrl.match(/https:\/\/([^.]+)\.sharepoint\.com/);
+  return m ? m[1] : 'common';
+}
+
+function parseTokenFromHash(hash) {
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  return params.get('access_token');
+}
+
 async function getToken() {
   if (S.token) return S.token;
-  // Uses MSAL implicit flow via SharePoint's built-in auth context
-  // When hosted on SharePoint, window._spPageContextInfo is available
-  if (window._spPageContextInfo?.aadInfo) {
-    // SharePoint hosted: use SP's token
-    try {
-      const ctx = await new Promise(res => {
-        SP.SOD.executeFunc('sp.js', 'SP.ClientContext', () => {
-          const request = new XMLHttpRequest();
-          request.open('GET', `${CONFIG.siteUrl}/_api/contextinfo`, false);
-          request.setRequestHeader('Accept', 'application/json');
-          request.send();
-          res(JSON.parse(request.responseText)?.FormDigestValue);
-        });
-      });
-      return ctx;
-    } catch(e) {}
+
+  // Check if we got a token back in the URL hash (after redirect)
+  if (window.location.hash && window.location.hash.includes('access_token')) {
+    const token = parseTokenFromHash(window.location.hash);
+    if (token) {
+      S.token = token;
+      // Clean up the hash
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      return S.token;
+    }
   }
-  // MSAL fallback for standalone use
-  if (!window.msalInstance) {
-    const { PublicClientApplication } = await import('https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/dist/index.esm.js');
-    const tenantId = CONFIG.siteUrl.match(/https:\/\/([^.]+)\.sharepoint\.com/)?.[1];
-    window.msalInstance = new PublicClientApplication({
-      auth: {
-        clientId: CONFIG.clientId || '00000003-0000-0ff1-ce00-000000000000',
-        authority: `https://login.microsoftonline.com/${tenantId || 'common'}`,
-        redirectUri: window.location.href,
+
+  // Check sessionStorage for cached token
+  const cached = sessionStorage.getItem('qr_token');
+  const cachedExp = sessionStorage.getItem('qr_token_exp');
+  if (cached && cachedExp && Date.now() < parseInt(cachedExp)) {
+    S.token = cached;
+    return S.token;
+  }
+
+  // Launch OAuth2 popup
+  return new Promise((resolve, reject) => {
+    const tenant = getTenantId();
+    const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
+    const scope = encodeURIComponent(GRAPH_SCOPE);
+    const authUrl = `https://login.microsoftonline.com/${tenant}.onmicrosoft.com/oauth2/v2.0/authorize?client_id=${GRAPH_CLIENT_ID}&response_type=token&redirect_uri=${redirectUri}&scope=${scope}&response_mode=fragment&prompt=select_account`;
+
+    const popup = window.open(authUrl, 'msauth', 'width=500,height=650,scrollbars=yes');
+    if (!popup) {
+      reject(new Error('Popup blocked. Please allow popups for this site and try again.'));
+      return;
+    }
+
+    const timer = setInterval(() => {
+      try {
+        if (popup.closed) {
+          clearInterval(timer);
+          reject(new Error('Login cancelled.'));
+          return;
+        }
+        const hash = popup.location.hash;
+        if (hash && hash.includes('access_token')) {
+          clearInterval(timer);
+          popup.close();
+          const token = parseTokenFromHash(hash);
+          if (token) {
+            S.token = token;
+            // Cache for 55 minutes
+            sessionStorage.setItem('qr_token', token);
+            sessionStorage.setItem('qr_token_exp', String(Date.now() + 55 * 60 * 1000));
+            resolve(token);
+          } else {
+            reject(new Error('Could not parse token from response.'));
+          }
+        }
+      } catch(e) {
+        // Cross-origin — popup is on Microsoft login page, keep waiting
       }
-    });
-    await window.msalInstance.initialize();
-  }
-  const accounts = window.msalInstance.getAllAccounts();
-  const req = { scopes: ['https://graph.microsoft.com/Sites.ReadWrite.All'], account: accounts[0] };
-  try {
-    const r = await window.msalInstance.acquireTokenSilent(req);
-    S.token = r.accessToken; return S.token;
-  } catch {
-    const r = await window.msalInstance.acquireTokenPopup(req);
-    S.token = r.accessToken; return S.token;
-  }
+    }, 500);
+
+    // Timeout after 3 minutes
+    setTimeout(() => {
+      clearInterval(timer);
+      if (!popup.closed) popup.close();
+      reject(new Error('Login timed out.'));
+    }, 180000);
+  });
 }
 
 async function graphGet(path) {
